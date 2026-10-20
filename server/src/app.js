@@ -134,22 +134,33 @@ function createApp() {
   app.use('/api/teams', teamRoutes);
   app.use('/api/tasks', taskRoutes);
 
-  // 9. Production Static Frontend Serving (Cloud Run / Unified container support)
+  // 9. Frontend Serving
   const path = require('path');
   const fs = require('fs');
   const clientDist = path.join(__dirname, '../../client/dist');
+
   if (fs.existsSync(clientDist)) {
+    // Production: serve built React app as static files
     app.use(express.static(clientDist));
     app.get('*', (req, res, next) => {
-      if (req.path.startsWith('/api')) {
-        return next();
-      }
+      if (req.path.startsWith('/api')) return next();
       res.sendFile(path.join(clientDist, 'index.html'));
+    });
+  } else {
+    // Development: root route redirects browser to Vite dev server
+    const frontendUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+    app.get('/', (req, res) => {
+      res.redirect(frontendUrl);
+    });
+
+    // Catch-all for non-API, non-root paths in dev — redirect to frontend
+    app.get(/^(?!\/api).*/, (req, res) => {
+      res.redirect(frontendUrl);
     });
   }
 
-  // 10. 404 & Centralized Error Handlers
-  app.use(notFoundHandler);
+  // 10. 404 only for unmatched /api/* routes & Centralized Error Handler
+  app.use('/api', notFoundHandler);
   app.use(errorHandler);
 
   return app;
