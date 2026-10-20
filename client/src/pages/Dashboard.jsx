@@ -216,6 +216,25 @@ const Dashboard = () => {
         </div>
       )}
 
+      {/* Due Soon Reminder Banner (Bonus: Task Due Date Reminders on login) */}
+      {stats && stats.dueSoonTasks > 0 && stats.overdueTasks === 0 && (
+        <div className="flex items-center justify-between p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 animate-fade-in shadow-xs">
+          <div className="flex items-center gap-3 text-xs md:text-sm font-medium">
+            <Clock className="w-5 h-5 text-amber-600 shrink-0" />
+            <span>
+              ⏰ <strong className="font-bold">{stats.dueSoonTasks}</strong>{' '}
+              {stats.dueSoonTasks === 1 ? 'task is' : 'tasks are'} due within the next 2 days — stay on track!
+            </span>
+          </div>
+          <button
+            onClick={() => setStatusFilter('In Progress')}
+            className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-amber-600 text-white hover:bg-amber-700 transition-colors shrink-0"
+          >
+            View Active
+          </button>
+        </div>
+      )}
+
       {/* Metrics Summary Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
         {/* Total Teams */}
