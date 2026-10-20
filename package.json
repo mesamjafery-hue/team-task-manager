@@ -1,0 +1,23 @@
+{
+  "name": "team-task-manager",
+  "version": "1.0.0",
+  "description": "Team Task Manager Full-Stack Application",
+  "scripts": {
+    "start": "node server/src/server.js",
+    "dev:server": "npm --prefix server run dev",
+    "dev:client": "npm --prefix client run dev",
+    "build": "npm --prefix client run build",
+    "test": "npm --prefix server test",
+    "migrate": "npm --prefix server run migrate",
+    "seed": "npm --prefix server run seed"
+  },
+  "keywords": [
+    "task-manager",
+    "react",
+    "express",
+    "postgresql",
+    "vite"
+  ],
+  "author": "",
+  "license": "ISC"
+}
