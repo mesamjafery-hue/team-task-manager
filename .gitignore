@@ -13,6 +13,8 @@ node_modules/
 # Build outputs
 dist/
 build/
+.vite/
+client/.vite/
 
 # Logs
 logs/
