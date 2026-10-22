@@ -23,8 +23,9 @@ async function startServer() {
     }
 
     // 3. Create and start Express server
+    // Bind to '127.0.0.1' explicitly so both IPv4 and IPv6 work on Windows Node.js v18+
     const app = createApp();
-    const server = app.listen(PORT, () => {
+    const server = app.listen(PORT, '127.0.0.1', () => {
       console.log(`====================================================`);
       console.log(`🚀 Team Task Manager Backend Server is RUNNING`);
       console.log(`📡 URL: http://localhost:${PORT}`);
