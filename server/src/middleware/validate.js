@@ -1,12 +1,13 @@
 const { validationResult } = require('express-validator');
 
-// Validation middleware that formats validation errors consistently
+/**
+ * Runs an array of express-validator chains (which also apply sanitizers such as
+ * trim/stripHtml to req), then responds 400 with every field error if any failed.
+ */
 const validate = (validations) => {
   return async (req, res, next) => {
-    // Run all validations
     for (const validation of validations) {
-      const result = await validation.run(req);
-      if (result.errors.length) break;
+      await validation.run(req);
     }
 
     const errors = validationResult(req);
@@ -14,10 +15,9 @@ const validate = (validations) => {
       return next();
     }
 
-    const formattedErrors = errors.array().map((err) => ({
-      field: err.path || err.param,
+    const formattedErrors = errors.array({ onlyFirstError: true }).map((err) => ({
+      field: err.path,
       message: err.msg,
-      value: err.value,
     }));
 
     return res.status(400).json({

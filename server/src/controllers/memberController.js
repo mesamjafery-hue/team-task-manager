@@ -3,6 +3,20 @@ const memberModel = require('../models/memberModel');
 const userModel = require('../models/userModel');
 
 const memberController = {
+  // GET /api/teams/members - Everyone who shares a team with the current user
+  async listCollaborators(req, res, next) {
+    try {
+      const members = await memberModel.getCollaborators(req.user.id);
+      return res.status(200).json({
+        success: true,
+        count: members.length,
+        members,
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+
   // GET /api/teams/:id/members - List team members
   async listMembers(req, res, next) {
     try {

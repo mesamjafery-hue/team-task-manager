@@ -18,6 +18,15 @@ function formatTask(task) {
   };
 }
 
+// 'YYYY-MM-DD' for today + `days` (UTC, matching the database's CURRENT_DATE on Cloud SQL)
+function dateFromToday(days) {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().split('T')[0];
+}
+
+const DUE_SOON_DAYS = 2;
+
 const taskModel = {
   // Find tasks authorized for the user with multi-dimensional filtering
   async findFiltered({ userId, teamId, assigneeId, status, priority, isOverdue, search, myTasksOnly }) {
@@ -81,7 +90,9 @@ const taskModel = {
     }
 
     if (isOverdue === 'true' || isOverdue === true) {
-      sql += ` AND t.due_date IS NOT NULL AND t.due_date < CURRENT_DATE AND t.status != 'Completed'`;
+      // NULL due dates never satisfy the comparison, so no IS NOT NULL check is needed
+      // (adding one also triggers an index bug in the pg-mem dev fallback).
+      sql += ` AND t.due_date < CURRENT_DATE AND t.status != 'Completed'`;
     }
 
     if (search && search.trim()) {
@@ -201,6 +212,30 @@ const taskModel = {
     return result.rows[0] || null;
   },
 
+  // Unfinished tasks assigned to the user that are overdue or due within `days` days
+  async findReminders(userId, days = 3) {
+    const sql = `
+      SELECT
+        t.id,
+        t.title,
+        t.team_id,
+        t.status,
+        t.priority,
+        t.due_date,
+        team.name AS team_name,
+        CASE WHEN t.due_date < CURRENT_DATE THEN true ELSE false END AS is_overdue
+      FROM tasks t
+      INNER JOIN teams team ON t.team_id = team.id
+      WHERE t.assigned_to = $1
+        AND t.status != 'Completed'
+        AND t.due_date <= CAST($2 AS DATE) -- NULL due dates never match a comparison
+        AND t.team_id IN (SELECT team_id FROM team_members WHERE user_id = $1)
+      ORDER BY t.due_date ASC, t.id ASC
+    `;
+    const result = await db.query(sql, [userId, dateFromToday(days)]);
+    return result.rows.map(formatTask);
+  },
+
   // Real database metrics calculation for user dashboard
   async getUserDashboardStats(userId) {
     const teamsRes = await db.query(
@@ -215,11 +250,11 @@ const taskModel = {
         COUNT(CASE WHEN t.status = 'In Progress' THEN 1 END)::int AS in_progress_tasks,
         COUNT(CASE WHEN t.status = 'Completed' THEN 1 END)::int AS completed_tasks,
         COUNT(CASE WHEN t.due_date IS NOT NULL AND t.due_date < CURRENT_DATE AND t.status != 'Completed' THEN 1 END)::int AS overdue_tasks,
-        COUNT(CASE WHEN t.due_date IS NOT NULL AND t.due_date >= CURRENT_DATE AND t.status != 'Completed' THEN 1 END)::int AS due_soon_tasks
+        COUNT(CASE WHEN t.due_date IS NOT NULL AND t.due_date >= CURRENT_DATE AND t.due_date <= CAST($2 AS DATE) AND t.status != 'Completed' THEN 1 END)::int AS due_soon_tasks
       FROM tasks t
       WHERE t.team_id IN (SELECT team_id FROM team_members WHERE user_id = $1)
     `;
-    const tasksRes = await db.query(tasksSql, [userId]);
+    const tasksRes = await db.query(tasksSql, [userId, dateFromToday(DUE_SOON_DAYS)]);
     const row = tasksRes.rows[0] || {};
     const totalTeams = parseInt(teamsRes.rows[0]?.total_teams || 0, 10);
 

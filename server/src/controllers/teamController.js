@@ -109,17 +109,25 @@ const teamController = {
     }
   },
 
-  // DELETE /api/teams/:id - Delete a team (Owner only)
+  // DELETE /api/teams/:id - Delete a team (team creator only)
   async deleteTeam(req, res, next) {
     try {
       const teamId = parseInt(req.params.id, 10);
+      const team = await teamModel.findById(teamId);
 
-      // Verify owner
-      const role = await teamModel.getUserRole(teamId, req.user.id);
-      if (role !== 'owner') {
+      if (!team) {
+        return res.status(404).json({
+          success: false,
+          message: 'Team not found.',
+        });
+      }
+
+      // Role-based access: only the user who created the team may delete it.
+      // (Members promoted to "owner" can manage the team but cannot delete it.)
+      if (team.owner_id !== req.user.id) {
         return res.status(403).json({
           success: false,
-          message: 'Forbidden. Only the team owner can delete this team.',
+          message: 'Forbidden. Only the team creator can delete this team.',
         });
       }
 
