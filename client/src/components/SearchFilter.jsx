@@ -1,5 +1,6 @@
 import React from 'react';
-import { Search, X, Filter, RotateCcw, AlertCircle } from 'lucide-react';
+import { Search, X, RotateCcw, AlertCircle } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const SearchFilter = ({
   search,
@@ -19,6 +20,8 @@ const SearchFilter = ({
   members = [],
   showTeamFilter = true,
 }) => {
+  const { user } = useAuth();
+  const currentUserId = user?.id;
   const isFiltered = Boolean(
     search || teamId || assigneeId || status || priority || isOverdue
   );
@@ -112,7 +115,7 @@ const SearchFilter = ({
             <option value="unassigned">Unassigned</option>
             {members.map((m) => (
               <option key={m.user_id} value={m.user_id}>
-                {m.name}
+                {m.user_id === currentUserId ? `${m.name} (you)` : m.name}
               </option>
             ))}
           </select>
