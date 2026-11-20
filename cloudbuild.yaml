@@ -1,28 +1,46 @@
+# Google Cloud Build pipeline: build image -> push to Artifact Registry -> deploy to Cloud Run.
+#
+# Run manually:
+#   gcloud builds submit --config cloudbuild.yaml \
+#     --substitutions=_CLOUDSQL_INSTANCE=PROJECT_ID:us-central1:team-task-db
+#
+# Prerequisites (see README "Google Cloud Platform Deployment Guide"):
+#   - Artifact Registry Docker repo named ${_AR_REPO} in ${_REGION}
+#   - Secret Manager secrets "session-secret" and "database-url"
+#   - Cloud SQL (PostgreSQL) instance ${_CLOUDSQL_INSTANCE}
+
+substitutions:
+  _REGION: us-central1
+  _SERVICE: team-task-manager
+  _AR_REPO: team-task-manager
+  _CLOUDSQL_INSTANCE: ''
+
 steps:
-  # 1. Build Docker image with Google Cloud Build
+  # 1. Build the container image
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-t', 'gcr.io/$PROJECT_ID/team-task-manager:$COMMIT_SHA', '.']
+    args: ['build', '-t', '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/${_SERVICE}:$BUILD_ID', '.']
 
-  # 2. Push container image to Google Container Registry / Artifact Registry
+  # 2. Push it to Artifact Registry
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'gcr.io/$PROJECT_ID/team-task-manager:$COMMIT_SHA']
+    args: ['push', '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/${_SERVICE}:$BUILD_ID']
 
-  # 3. Deploy to Google Cloud Run
+  # 3. Deploy to Cloud Run, connected to Cloud SQL, with secrets from Secret Manager
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
     args:
       - 'run'
       - 'deploy'
-      - 'team-task-manager'
-      - '--image'
-      - 'gcr.io/$PROJECT_ID/team-task-manager:$COMMIT_SHA'
-      - '--region'
-      - 'us-central1'
-      - '--platform'
-      - 'managed'
+      - '${_SERVICE}'
+      - '--image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/${_SERVICE}:$BUILD_ID'
+      - '--region=${_REGION}'
+      - '--platform=managed'
       - '--allow-unauthenticated'
-      - '--set-env-vars'
-      - 'NODE_ENV=production'
+      - '--add-cloudsql-instances=${_CLOUDSQL_INSTANCE}'
+      - '--set-env-vars=NODE_ENV=production,SEED_DEMO_DATA=true'
+      - '--set-secrets=SESSION_SECRET=session-secret:latest,DATABASE_URL=database-url:latest'
 
 images:
-  - 'gcr.io/$PROJECT_ID/team-task-manager:$COMMIT_SHA'
+  - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/${_SERVICE}:$BUILD_ID'
+
+options:
+  logging: CLOUD_LOGGING_ONLY

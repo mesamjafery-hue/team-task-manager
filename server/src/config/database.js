@@ -62,19 +62,26 @@ async function getPool() {
     return pool;
   }
 
+  const candidatePool = createPgPool();
   try {
-    const candidatePool = createPgPool();
     // Test connection with a short timeout
     const client = await Promise.race([
       candidatePool.connect(),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('Connection timeout')), 2500))
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Connection timeout')), 5000))
     ]);
     client.release();
     pool = candidatePool;
     console.log(' Connected to PostgreSQL database successfully.');
     return pool;
   } catch (err) {
-    if (process.env.USE_LOCAL_FALLBACK_IF_NO_PG === 'true' || process.env.NODE_ENV !== 'production') {
+    candidatePool.end().catch(() => {});
+
+    // The in-memory fallback is a development convenience only. In production a
+    // missing database must fail loudly instead of silently losing data.
+    const allowFallback =
+      process.env.NODE_ENV !== 'production' && process.env.USE_LOCAL_FALLBACK_IF_NO_PG !== 'false';
+
+    if (allowFallback) {
       console.warn(`⚠️ Could not connect to external PostgreSQL (${err.message}). Activating local in-memory PostgreSQL fallback.`);
       pool = initFallbackDb();
       return pool;
@@ -82,6 +89,11 @@ async function getPool() {
     console.error('❌ Failed to connect to PostgreSQL database:', err.message);
     throw err;
   }
+}
+
+// Returns the already-initialised pool (or null if getPool() has not run yet).
+function getActivePool() {
+  return pool;
 }
 
 // Helper query function with automatic connection handling
@@ -102,6 +114,7 @@ function isUsingFallback() {
 
 module.exports = {
   getPool,
+  getActivePool,
   query,
   getClient,
   isUsingFallback,

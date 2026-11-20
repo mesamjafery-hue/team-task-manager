@@ -3,9 +3,12 @@ dotenv.config();
 
 const createApp = require('./app');
 const { getPool, isUsingFallback } = require('./config/database');
+const runMigrations = require('../migrations/runMigrations');
 const seedData = require('../migrations/seedData');
 
 const PORT = process.env.PORT || 5000;
+// Cloud Run (and any container platform) routes traffic to 0.0.0.0, so never bind to loopback only.
+const HOST = process.env.HOST || '0.0.0.0';
 
 async function startServer() {
   try {
@@ -13,8 +16,13 @@ async function startServer() {
     console.log(' Connecting to database...');
     await getPool();
 
-    // 2. Auto-seed demo data in development if table is empty
-    if (process.env.NODE_ENV !== 'production') {
+    // 2. Ensure the schema exists (idempotent). The in-memory fallback loads the schema itself.
+    if (!isUsingFallback()) {
+      await runMigrations();
+    }
+
+    // 3. Auto-seed demo data in development if the users table is empty
+    if (process.env.NODE_ENV !== 'production' || process.env.SEED_DEMO_DATA === 'true') {
       try {
         await seedData();
       } catch (seedErr) {
@@ -22,10 +30,9 @@ async function startServer() {
       }
     }
 
-    // 3. Create and start Express server
-    // Bind to '127.0.0.1' explicitly so both IPv4 and IPv6 work on Windows Node.js v18+
+    // 4. Create and start Express server
     const app = createApp();
-    const server = app.listen(PORT, '127.0.0.1', () => {
+    const server = app.listen(PORT, HOST, () => {
       console.log(`====================================================`);
       console.log(`🚀 Team Task Manager Backend Server is RUNNING`);
       console.log(`📡 URL: http://localhost:${PORT}`);
