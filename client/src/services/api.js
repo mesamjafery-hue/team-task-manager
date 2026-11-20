@@ -30,6 +30,7 @@ export const authApi = {
 // Team API methods
 export const teamsApi = {
   list: () => api.get('/teams'),
+  listCollaborators: () => api.get('/teams/members'),
   create: (data) => api.post('/teams', data),
   getDetails: (id) => api.get(`/teams/${id}`),
   update: (id, data) => api.patch(`/teams/${id}`, data),
@@ -44,6 +45,7 @@ export const teamsApi = {
 export const tasksApi = {
   list: (params) => api.get('/tasks', { params }),
   getStats: () => api.get('/tasks/dashboard/stats'),
+  getReminders: (days = 3) => api.get('/tasks/reminders', { params: { days } }),
   get: (id) => api.get(`/tasks/${id}`),
   create: (data) => api.post('/tasks', data),
   update: (id, data) => api.patch(`/tasks/${id}`, data),

@@ -2,8 +2,13 @@ const fs = require('fs');
 const path = require('path');
 const { getClient } = require('../src/config/database');
 
+/**
+ * Applies the SQL schema. Every statement uses IF NOT EXISTS, so this is safe to
+ * run on every server start (which is how the Cloud Run deployment bootstraps a
+ * fresh Cloud SQL database).
+ */
 async function runMigrations() {
-  console.log(' Starting database migrations...');
+  console.log(' Running database migrations...');
   const client = await getClient();
   try {
     const migrationFile = path.join(__dirname, '001_initial_schema.sql');
@@ -17,7 +22,7 @@ async function runMigrations() {
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('❌ Migration failed:', error.message);
-    process.exit(1);
+    throw error;
   } finally {
     client.release();
   }

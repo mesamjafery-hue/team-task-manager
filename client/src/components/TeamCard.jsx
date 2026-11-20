@@ -1,9 +1,13 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Users, CheckSquare, Shield, Crown, ArrowRight, MoreHorizontal, Trash2, Edit } from 'lucide-react';
+import { Users, CheckSquare, Shield, Crown, ArrowRight, Trash2, Edit } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const TeamCard = ({ team, onEdit, onDelete }) => {
+  const { user } = useAuth();
   const isOwner = team.user_role === 'owner';
+  // Only the team creator may delete the team (enforced on the server too)
+  const isCreator = team.owner_id === user?.id;
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200/90 hover:border-slate-300 p-6 shadow-xs hover:shadow-md transition-all flex flex-col justify-between group">
@@ -35,7 +39,7 @@ const TeamCard = ({ team, onEdit, onDelete }) => {
                   <Edit className="w-3.5 h-3.5" />
                 </button>
               )}
-              {onDelete && (
+              {onDelete && isCreator && (
                 <button
                   onClick={(e) => {
                     e.preventDefault();

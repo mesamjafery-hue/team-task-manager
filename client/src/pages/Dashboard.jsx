@@ -11,7 +11,9 @@ import {
   TrendingUp,
   FolderPlus,
   Sparkles,
-  Inbox
+  Inbox,
+  BellRing,
+  Calendar,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { tasksApi, teamsApi } from '../services/api';
@@ -20,13 +22,17 @@ import TeamCard from '../components/TeamCard';
 import SearchFilter from '../components/SearchFilter';
 import TaskModal from '../components/TaskModal';
 import LoadingSpinner from '../components/LoadingSpinner';
+import useAssigneeOptions from '../hooks/useAssigneeOptions';
+
+const REMINDER_WINDOW_DAYS = 3;
 
 const Dashboard = () => {
-  const { user } = useAuth();
+  const { user, showToast } = useAuth();
 
   const [stats, setStats] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [teams, setTeams] = useState([]);
+  const [reminders, setReminders] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Filter states
@@ -36,6 +42,8 @@ const Dashboard = () => {
   const [statusFilter, setStatusFilter] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('');
   const [isOverdueFilter, setIsOverdueFilter] = useState(false);
+
+  const assigneeOptions = useAssigneeOptions(teamFilter);
 
   // Modal states
   const [taskModalOpen, setTaskModalOpen] = useState(false);
@@ -51,9 +59,10 @@ const Dashboard = () => {
   // Fetch dashboard stats and teams
   const loadDashboardData = async () => {
     try {
-      const [statsRes, teamsRes] = await Promise.all([
+      const [statsRes, teamsRes, remindersRes] = await Promise.all([
         tasksApi.getStats(),
         teamsApi.list(),
+        tasksApi.getReminders(REMINDER_WINDOW_DAYS),
       ]);
 
       if (statsRes.data?.success) {
@@ -61,6 +70,9 @@ const Dashboard = () => {
       }
       if (teamsRes.data?.success) {
         setTeams(teamsRes.data.teams || []);
+      }
+      if (remindersRes.data?.success) {
+        setReminders(remindersRes.data.reminders || []);
       }
     } catch (err) {
       console.error('Error fetching dashboard summary:', err);
@@ -112,17 +124,18 @@ const Dashboard = () => {
       loadTasks();
       loadDashboardData();
     } catch (err) {
-      console.error('Failed to change status:', err);
+      showToast(err.formattedMessage || 'Failed to update task status.', 'error');
     }
   };
 
   const handleDeleteTask = async (taskId) => {
     try {
       await tasksApi.delete(taskId);
+      showToast('Task deleted successfully.', 'info');
       loadTasks();
       loadDashboardData();
     } catch (err) {
-      console.error('Failed to delete task:', err);
+      showToast(err.formattedMessage || 'Failed to delete task.', 'error');
     }
   };
 
@@ -216,22 +229,42 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* Due Soon Reminder Banner (Bonus: Task Due Date Reminders on login) */}
-      {stats && stats.dueSoonTasks > 0 && stats.overdueTasks === 0 && (
-        <div className="flex items-center justify-between p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 animate-fade-in shadow-xs">
-          <div className="flex items-center gap-3 text-xs md:text-sm font-medium">
-            <Clock className="w-5 h-5 text-amber-600 shrink-0" />
+      {/* Bonus: due-date reminders for tasks assigned to the current user */}
+      {reminders.length > 0 && (
+        <div className="p-4 md:p-5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 animate-fade-in shadow-xs">
+          <div className="flex items-center gap-2 mb-3 text-sm font-bold">
+            <BellRing className="w-4 h-4 text-amber-600 shrink-0" />
             <span>
-              ⏰ <strong className="font-bold">{stats.dueSoonTasks}</strong>{' '}
-              {stats.dueSoonTasks === 1 ? 'task is' : 'tasks are'} due within the next 2 days — stay on track!
+              Reminders: {reminders.length} {reminders.length === 1 ? 'task' : 'tasks'} assigned to you{' '}
+              {reminders.length === 1 ? 'is' : 'are'} overdue or due within {REMINDER_WINDOW_DAYS} days
             </span>
           </div>
-          <button
-            onClick={() => setStatusFilter('In Progress')}
-            className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-amber-600 text-white hover:bg-amber-700 transition-colors shrink-0"
-          >
-            View Active
-          </button>
+          <ul className="divide-y divide-amber-200/70">
+            {reminders.slice(0, 5).map((task) => (
+              <li key={task.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-xs">
+                <div className="min-w-0">
+                  <p className="font-semibold text-slate-800 truncate">{task.title}</p>
+                  <p className="text-slate-500">{task.team_name}</p>
+                </div>
+                <span
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-semibold shrink-0 ${
+                    task.is_overdue ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-800'
+                  }`}
+                >
+                  <Calendar className="w-3 h-3" />
+                  {task.is_overdue ? `Overdue · ${task.due_date}` : `Due ${task.due_date}`}
+                </span>
+              </li>
+            ))}
+          </ul>
+          {reminders.length > 5 && (
+            <Link
+              to={`/tasks?myTasks=true`}
+              className="inline-block mt-2 text-xs font-semibold text-amber-800 hover:underline"
+            >
+              View all {reminders.length} reminders
+            </Link>
+          )}
         </div>
       )}
 
@@ -386,6 +419,7 @@ const Dashboard = () => {
           onOverdueToggle={setIsOverdueFilter}
           onReset={handleResetFilters}
           teams={teams}
+          members={assigneeOptions}
           showTeamFilter={true}
         />
 

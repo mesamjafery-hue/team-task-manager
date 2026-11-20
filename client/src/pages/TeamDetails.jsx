@@ -55,6 +55,7 @@ const TeamDetails = () => {
   // Task Filter state within this team
   const [taskStatusFilter, setTaskStatusFilter] = useState('');
   const [taskPriorityFilter, setTaskPriorityFilter] = useState('');
+  const [taskAssigneeFilter, setTaskAssigneeFilter] = useState('');
   const [taskSearch, setTaskSearch] = useState('');
 
   const isOwner = team?.user_role === 'owner';
@@ -195,6 +196,10 @@ const TeamDetails = () => {
   const filteredTasks = tasks.filter((t) => {
     if (taskStatusFilter && t.status !== taskStatusFilter) return false;
     if (taskPriorityFilter && t.priority !== taskPriorityFilter) return false;
+    if (taskAssigneeFilter === 'unassigned' && t.assigned_to) return false;
+    if (taskAssigneeFilter && taskAssigneeFilter !== 'unassigned' && String(t.assigned_to) !== taskAssigneeFilter) {
+      return false;
+    }
     if (taskSearch.trim()) {
       const q = taskSearch.toLowerCase();
       return (
@@ -347,6 +352,21 @@ const TeamDetails = () => {
               <option value="High">High</option>
               <option value="Medium">Medium</option>
               <option value="Low">Low</option>
+            </select>
+
+            <select
+              value={taskAssigneeFilter}
+              onChange={(e) => setTaskAssigneeFilter(e.target.value)}
+              className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-hidden"
+              aria-label="Filter by assignee"
+            >
+              <option value="">All Assignees</option>
+              <option value="unassigned">Unassigned</option>
+              {members.map((m) => (
+                <option key={m.user_id} value={m.user_id}>
+                  {m.user_id === user?.id ? `${m.name} (you)` : m.name}
+                </option>
+              ))}
             </select>
           </div>
 

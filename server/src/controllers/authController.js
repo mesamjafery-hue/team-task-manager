@@ -54,7 +54,6 @@ const authController = {
       }
 
       // Prevent session fixation by regenerating session
-      const prevSession = req.session;
       req.session.regenerate((regenErr) => {
         if (regenErr) return next(regenErr);
 
@@ -118,7 +117,7 @@ const authController = {
   async searchUsers(req, res, next) {
     try {
       const q = req.query.q || '';
-      const teamId = req.query.teamId ? parseInt(req.query.teamId, 10) : null;
+      const teamId = req.query.teamId || null;
       if (!q.trim()) {
         return res.status(200).json({ success: true, users: [] });
       }

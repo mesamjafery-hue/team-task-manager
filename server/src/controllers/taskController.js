@@ -194,7 +194,7 @@ const taskController = {
         });
       }
 
-      // Allow deletion if caller is team owner, task creator, or task assignee
+      // Allow deletion only if caller is a team owner or the task creator
       const callerRole = await teamModel.getUserRole(existingTask.team_id, req.user.id);
       const isCreator = existingTask.created_by === req.user.id;
       const isOwner = callerRole === 'owner';
@@ -211,6 +211,24 @@ const taskController = {
       return res.status(200).json({
         success: true,
         message: 'Task deleted successfully.',
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  // GET /api/tasks/reminders?days=3 - Bonus: due-date reminders shown after login.
+  // Returns the current user's unfinished tasks that are overdue or due within `days`.
+  async getReminders(req, res, next) {
+    try {
+      const days = req.query.days || 3;
+      const reminders = await taskModel.findReminders(req.user.id, days);
+      return res.status(200).json({
+        success: true,
+        days,
+        count: reminders.length,
+        overdueCount: reminders.filter((t) => t.is_overdue).length,
+        reminders,
       });
     } catch (err) {
       next(err);

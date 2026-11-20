@@ -7,6 +7,7 @@ import TaskCard from '../components/TaskCard';
 import SearchFilter from '../components/SearchFilter';
 import TaskModal from '../components/TaskModal';
 import LoadingSpinner from '../components/LoadingSpinner';
+import useAssigneeOptions from '../hooks/useAssigneeOptions';
 
 const Tasks = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -32,6 +33,8 @@ const Tasks = () => {
   // Modal state
   const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState(null);
+
+  const assigneeOptions = useAssigneeOptions(teamFilter);
 
   // Sync if myTasks param changes
   useEffect(() => {
@@ -99,7 +102,10 @@ const Tasks = () => {
     }
   };
 
-  const handleDeleteTask = async (taskId) => {
+  const handleDeleteTask = async (taskId, { confirmFirst = false } = {}) => {
+    if (confirmFirst && !window.confirm('Delete this task? This action cannot be undone.')) {
+      return;
+    }
     try {
       await tasksApi.delete(taskId);
       showToast('Task deleted successfully.', 'info');
@@ -183,6 +189,7 @@ const Tasks = () => {
         onOverdueToggle={setIsOverdueFilter}
         onReset={handleResetFilters}
         teams={teams}
+        members={assigneeOptions}
         showTeamFilter={true}
       />
 
@@ -273,7 +280,7 @@ const Tasks = () => {
                         Edit
                       </button>
                       <button
-                        onClick={() => handleDeleteTask(task.id)}
+                        onClick={() => handleDeleteTask(task.id, { confirmFirst: true })}
                         className="text-rose-500 hover:text-rose-700 font-medium"
                       >
                         Delete

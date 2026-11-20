@@ -1,3 +1,5 @@
+import plugin from 'tailwindcss/plugin';
+
 /** @type {import('tailwindcss').Config} */
 export default {
   content: [
@@ -23,7 +25,24 @@ export default {
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
       },
+      // Small sizes used across the UI that Tailwind v3 does not ship by default
+      boxShadow: {
+        xs: '0 1px 2px 0 rgb(0 0 0 / 0.05)',
+      },
+      backdropBlur: {
+        xs: '2px',
+      },
     },
   },
-  plugins: [],
+  plugins: [
+    // `outline-hidden`: removes the browser outline while keeping it in forced-colors mode
+    plugin(({ addUtilities }) => {
+      addUtilities({
+        '.outline-hidden': {
+          outline: '2px solid transparent',
+          'outline-offset': '2px',
+        },
+      });
+    }),
+  ],
 }

@@ -21,6 +21,19 @@ const memberModel = {
     return result.rows;
   },
 
+  // Distinct users who share at least one team with the given user (assignee filter options)
+  async getCollaborators(userId) {
+    const sql = `
+      SELECT DISTINCT u.id AS user_id, u.name, u.email
+      FROM team_members tm
+      INNER JOIN users u ON tm.user_id = u.id
+      WHERE tm.team_id IN (SELECT team_id FROM team_members WHERE user_id = $1)
+      ORDER BY u.name ASC
+    `;
+    const result = await db.query(sql, [userId]);
+    return result.rows;
+  },
+
   // Add member to team
   async addMember(teamId, userId, role = 'member') {
     const sql = `
