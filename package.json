@@ -1,23 +1,27 @@
 {
-  "name": "team-task-manager",
+  "name": "team-task-manager-client",
+  "private": true,
   "version": "1.0.0",
-  "description": "Team Task Manager Full-Stack Application",
+  "type": "module",
   "scripts": {
-    "start": "node server/src/server.js",
-    "dev:server": "npm --prefix server run dev",
-    "dev:client": "npm --prefix client run dev",
-    "build": "npm --prefix client run build",
-    "test": "npm --prefix server test",
-    "migrate": "npm --prefix server run migrate",
-    "seed": "npm --prefix server run seed"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
   },
-  "keywords": [
-    "task-manager",
-    "react",
-    "express",
-    "postgresql",
-    "vite"
-  ],
-  "author": "",
-  "license": "ISC"
+  "dependencies": {
+    "axios": "^1.7.9",
+    "lucide-react": "^0.473.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.28.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "vite": "^6.0.7"
+  }
 }
